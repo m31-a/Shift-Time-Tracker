@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shift Progress · Jeddah</title>
+<style>
+  :root{
+    --ink:#F5F7FA;
+    --ink-dim:#94A0B8;
+    --ink-faint:#5A6272;
+    --panel:rgba(255,255,255,0.045);
+    --panel-border:rgba(255,255,255,0.09);
+    --track:rgba(255,255,255,0.06);
+    --daily-a:#0A84FF;   --daily-b:#5AC8FA;
+    --weekly-a:#FF9F0A;  --weekly-b:#FFD60A;
+    --monthly-a:#FF453A; --monthly-b:#FF9F0A;
+    --deep:#070A12;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--deep);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100%;
+    display:flex;align-items:center;justify-content:center;
+    padding:32px 18px;
+    position:relative;overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---- Ambient dark background ---- */
+  .bg{position:fixed;inset:0;z-index:-2;overflow:hidden;
+    background:
+      radial-gradient(1100px 700px at 78% -8%,  rgba(70,54,140,.55) 0%, transparent 58%),
+      radial-gradient(900px 700px  at 12% 8%,   rgba(15,90,120,.45) 0%, transparent 55%),
+      radial-gradient(1000px 900px at 50% 118%, rgba(120,40,70,.40) 0%, transparent 60%),
+      linear-gradient(160deg,#0A0E1A 0%, #070A12 55%, #05070E 100%);}
+  .blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.5;
+    animation:float 22s ease-in-out infinite}
+  .b1{width:420px;height:420px;top:-120px;left:-90px;
+    background:radial-gradient(circle,#3b3ea0 0%,transparent 70%)}
+  .b2{width:380px;height:380px;bottom:-140px;right:-100px;
+    background:radial-gradient(circle,#8a2b52 0%,transparent 70%);animation-delay:-8s}
+  .b3{width:300px;height:300px;top:40%;right:-120px;
+    background:radial-gradient(circle,#0f6a86 0%,transparent 70%);animation-delay:-14s}
+  .grain{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+  @keyframes float{
+    0%,100%{transform:translate(0,0) scale(1)}
+    33%{transform:translate(40px,30px) scale(1.08)}
+    66%{transform:translate(-30px,20px) scale(.94)}
+  }
+
+  .app{width:100%;max-width:400px;position:relative}
+
+  .head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px;padding:0 2px}
+  .head h1{font-size:15px;font-weight:600;letter-spacing:.2px}
+  .head .loc{font-size:11px;color:var(--ink-dim);letter-spacing:.6px;text-transform:uppercase}
+
+  /* ---- Rings ---- */
+  .ring-wrap{position:relative;width:100%;aspect-ratio:1;max-width:340px;margin:0 auto}
+  svg{width:100%;height:100%;display:block;overflow:visible}
+  .track{fill:none;stroke:var(--track);stroke-width:22;stroke-linecap:round}
+  .value{fill:none;stroke-width:22;stroke-linecap:round;
+    transition:stroke-dashoffset 1s cubic-bezier(.22,.61,.36,1)}
+
+  .center{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;pointer-events:none}
+  .ctime{font-size:20px;font-weight:600;color:var(--ink);white-space:nowrap;
+    font-variant-numeric:tabular-nums;letter-spacing:.3px}
+  .ctime .ampm{font-size:13px;color:var(--ink-dim);margin-left:3px}
+  .cdate{margin-top:6px;font-size:12.5px;font-weight:600;color:var(--ink-dim);
+    font-variant-numeric:tabular-nums;letter-spacing:.2px}
+  .cpcts{position:absolute;left:0;right:0;bottom:7%;display:flex;flex-direction:column;
+    align-items:center;line-height:1.08;pointer-events:none;text-align:center}
+  .cp{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .cp.d{color:var(--daily-b)}
+  .cp.w{color:var(--weekly-b)}
+  .cp.m{color:var(--monthly-a)}
+  .subline{margin-top:16px;text-align:center;font-size:11px;font-weight:600;
+    color:var(--ink-dim);text-transform:uppercase;letter-spacing:1.4px}
+
+  /* ---- Legend ---- */
+  .legend{margin-top:20px;display:flex;flex-direction:column;gap:9px}
+  .row{display:flex;align-items:center;gap:13px;
+    background:var(--panel);border:1px solid var(--panel-border);
+    border-radius:15px;padding:13px 15px;backdrop-filter:blur(6px)}
+  .swatch{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+  .meta{flex:1;min-width:0}
+  .meta .name{font-size:14px;font-weight:600;letter-spacing:.2px}
+  .meta .sub{font-size:11.5px;color:var(--ink-dim);margin-top:2px;font-variant-numeric:tabular-nums}
+  .pct{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+
+  .foot{margin-top:15px;text-align:center;font-size:11px;color:var(--ink-faint);letter-spacing:.3px}
+
+  /* ---- Holidays ---- */
+  .hol-toggle{display:block;margin:14px auto 0;background:none;border:none;cursor:pointer;
+    color:var(--ink-dim);font-size:11.5px;letter-spacing:.4px;font-family:inherit;
+    padding:6px 10px;border-radius:8px}
+  .hol-toggle:hover{color:var(--ink)}
+  .hol{margin-top:8px;background:var(--panel);border:1px solid var(--panel-border);
+    border-radius:15px;padding:15px;backdrop-filter:blur(6px);display:none}
+  .hol.open{display:block}
+  .hol h2{font-size:12px;font-weight:600;letter-spacing:.3px;margin-bottom:3px}
+  .hol .hint{font-size:11px;color:var(--ink-faint);margin-bottom:12px;line-height:1.5}
+  .hol-add{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+  .hol-add input{background:rgba(0,0,0,.25);border:1px solid var(--panel-border);
+    color:var(--ink);border-radius:9px;padding:8px 10px;font-size:12.5px;font-family:inherit}
+  .hol-add input[type=date]{flex:0 0 auto;color-scheme:dark}
+  .hol-add input[type=text]{flex:1;min-width:100px}
+  .hol-add button{background:var(--daily-a);color:#fff;border:none;border-radius:9px;
+    padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .hol-add button:hover{filter:brightness(1.1)}
+  .hol-list{display:flex;flex-direction:column;gap:6px;max-height:190px;overflow-y:auto}
+  .hol-item{display:flex;align-items:center;gap:10px;font-size:12.5px;
+    padding:7px 10px;background:rgba(0,0,0,.2);border-radius:9px}
+  .hol-item .d{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600;flex:0 0 auto}
+  .hol-item .l{color:var(--ink-dim);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hol-item .wd{font-size:10px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.5px}
+  .hol-item button{background:none;border:none;color:var(--ink-faint);cursor:pointer;
+    font-size:16px;line-height:1;padding:2px 6px;border-radius:6px}
+  .hol-item button:hover{color:#FF453A;background:rgba(255,69,58,.12)}
+  .hol-empty{font-size:12px;color:var(--ink-faint);text-align:center;padding:10px}
+
+  @media (prefers-reduced-motion:reduce){ .value,.tip,.blob{transition:none;animation:none} }
+  @media (max-width:360px){ .cp{font-size:24px} }
+</style>
+</head>
+<body>
+  <div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+  <div class="grain"></div>
+
+  <div class="app">
+    <div class="head">
+      <h1>Shift Progress</h1>
+      <span class="loc">Jeddah · KSA</span>
+    </div>
+
+    <div class="ring-wrap">
+      <svg viewBox="0 0 320 320">
+        <defs>
+          <linearGradient id="gMonthly" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="var(--monthly-a)"/><stop offset="100%" stop-color="var(--monthly-b)"/>
+          </linearGradient>
+          <linearGradient id="gWeekly" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="var(--weekly-a)"/><stop offset="100%" stop-color="var(--weekly-b)"/>
+          </linearGradient>
+          <linearGradient id="gDaily" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="var(--daily-a)"/><stop offset="100%" stop-color="var(--daily-b)"/>
+          </linearGradient>
+        </defs>
+        <path class="track" id="trackM"></path>
+        <path class="track" id="trackW"></path>
+        <path class="track" id="trackD"></path>
+        <path class="value" id="valM" stroke="url(#gMonthly)" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"></path>
+        <path class="value" id="valW" stroke="url(#gWeekly)"  pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"></path>
+        <path class="value" id="valD" stroke="url(#gDaily)"   pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"></path>
+      </svg>
+
+      <div class="center">
+        <div class="ctime"><span id="time">--:--</span><span class="ampm" id="ampm"></span></div>
+        <div class="cdate" id="date">—</div>
+      </div>
+      <div class="cpcts">
+        <div class="cp d">D</div>
+        <div class="cp w">W</div>
+        <div class="cp m">M</div>
+      </div>
+    </div>
+
+    <div class="subline"><span id="status">—</span></div>
+
+    <div class="legend">
+      <div class="row">
+        <span class="swatch" style="background:var(--daily-b)"></span>
+        <div class="meta"><div class="name">Today</div><div class="sub" id="subD">—</div></div>
+        <div class="pct" id="pctD">0%</div>
+      </div>
+      <div class="row">
+        <span class="swatch" style="background:var(--weekly-b)"></span>
+        <div class="meta"><div class="name">This week</div><div class="sub" id="subW">—</div></div>
+        <div class="pct" id="pctW">0%</div>
+      </div>
+      <div class="row">
+        <span class="swatch" style="background:var(--monthly-a)"></span>
+        <div class="meta"><div class="name">This month</div><div class="sub" id="subM">—</div></div>
+        <div class="pct" id="pctM">0%</div>
+      </div>
+    </div>
+
+    <div class="foot">Sun–Thu · 8:30&nbsp;AM–4:00&nbsp;PM · live Jeddah time</div>
+
+    <button class="hol-toggle" id="holToggle">⚙ Manage public holidays</button>
+    <div class="hol" id="holPanel">
+      <h2>Public holidays</h2>
+      <p class="hint">Days listed here (Eid, National Day, Founding Day…) are treated as off and removed from the weekly &amp; monthly working-day totals. Seeded dates are editable — adjust Eid once the official dates are announced.</p>
+      <div class="hol-add">
+        <input type="date" id="holDate">
+        <input type="text" id="holLabel" placeholder="Label (e.g. Eid al-Fitr)">
+        <button id="holAdd">Add</button>
+      </div>
+      <div class="hol-list" id="holList"></div>
+    </div>
+  </div>
+
+<script>
+  // ---------- Shift config ----------
+  const SHIFT_START = 8*60 + 30, SHIFT_END = 16*60, SHIFT_LEN = SHIFT_END - SHIFT_START;
+  const isWorkday = dow => dow >= 0 && dow <= 4;        // Sun(0)–Thu(4)
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const WDAYS  = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const p2 = n => String(n).padStart(2,"0");
+  const key = (y,m,day) => `${y}-${p2(m+1)}-${p2(day)}`;   // m is 0-indexed
+
+  // ---------- Holidays (editable, persisted) ----------
+  const DEFAULT_HOLIDAYS = [
+    {date:"2026-02-22", label:"Founding Day"},
+    {date:"2026-03-20", label:"Eid al-Fitr (approx)"},
+    {date:"2026-03-21", label:"Eid al-Fitr (approx)"},
+    {date:"2026-03-22", label:"Eid al-Fitr (approx)"},
+    {date:"2026-03-23", label:"Eid al-Fitr (approx)"},
+    {date:"2026-05-26", label:"Eid al-Adha (approx)"},
+    {date:"2026-05-27", label:"Eid al-Adha (approx)"},
+    {date:"2026-05-28", label:"Eid al-Adha (approx)"},
+    {date:"2026-05-29", label:"Eid al-Adha (approx)"},
+    {date:"2026-09-23", label:"Saudi National Day"}
+  ];
+  let holidays = loadHolidays();
+  let holidaySet = new Set(holidays.map(h => h.date));
+
+  function loadHolidays(){
+    try{ const r = localStorage.getItem("ksaHolidays"); if(r) return JSON.parse(r); }catch(e){}
+    return DEFAULT_HOLIDAYS.slice();
+  }
+  function saveHolidays(){
+    holidaySet = new Set(holidays.map(h => h.date));
+    try{ localStorage.setItem("ksaHolidays", JSON.stringify(holidays)); }catch(e){}
+  }
+  const isHoliday = (y,m,day) => holidaySet.has(key(y,m,day));
+  // effective working day = weekday AND not a holiday
+  const effWork = (y,m,day,dow) => isWorkday(dow) && !isHoliday(y,m,day);
+
+  // ---------- Arc geometry (300° horseshoe, open at bottom) ----------
+  const CX=160, CY=160, R={M:132, W:104, D:76};
+  const polar = (r,deg)=>{const a=deg*Math.PI/180;return[CX+r*Math.cos(a),CY+r*Math.sin(a)];};
+  function arcPath(r){
+    const [sx,sy]=polar(r,120), [ex,ey]=polar(r,60);
+    return `M ${sx.toFixed(2)} ${sy.toFixed(2)} A ${r} ${r} 0 1 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
+  }
+  const dM=arcPath(R.M), dW=arcPath(R.W), dD=arcPath(R.D);
+  trackM.setAttribute("d",dM); valM.setAttribute("d",dM);
+  trackW.setAttribute("d",dW); valW.setAttribute("d",dW);
+  trackD.setAttribute("d",dD); valD.setAttribute("d",dD);
+
+  const clamp = p => Math.max(0, Math.min(1, p));
+  function setRing(el, p){ el.setAttribute("stroke-dashoffset",(100-100*clamp(p)).toFixed(2)); }
+
+  // ---------- Live Jeddah time ----------
+  function ksaNow(){ return new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Riyadh"})); }
+  function shiftFraction(d){
+    const y=d.getFullYear(), m=d.getMonth(), day=d.getDate();
+    if(!effWork(y,m,day,d.getDay())) return 0;
+    const mins = d.getHours()*60 + d.getMinutes() + d.getSeconds()/60;
+    if(mins <= SHIFT_START) return 0;
+    if(mins >= SHIFT_END)   return 1;
+    return (mins - SHIFT_START)/SHIFT_LEN;
+  }
+  const fmtHM = m => { m=Math.max(0,Math.round(m)); const h=Math.floor(m/60),mm=m%60; return (h?`${h}h `:"")+`${mm}m`; };
+
+  // ---------- Main update ----------
+  function update(){
+    const d = ksaNow();
+    const y=d.getFullYear(), mo=d.getMonth(), date=d.getDate(), dow=d.getDay();
+    const mins = d.getHours()*60 + d.getMinutes() + d.getSeconds()/60;
+    const frac = shiftFraction(d);
+
+    // Clock (no seconds) + bold date
+    let h=d.getHours(); const ampm=h>=12?"PM":"AM"; h=h%12||12;
+    time.textContent = `${h}:${p2(d.getMinutes())}`;
+    ampm_el.textContent = ampm;
+    date_el.textContent = `${WDAYS[dow]}, ${date} ${MONTHS[mo].slice(0,3)} ${y}`;
+
+    // Daily
+    let status, subD;
+    if(isHoliday(y,mo,date) && isWorkday(dow)){ status="Public holiday"; subD="Day off"; }
+    else if(!isWorkday(dow)){ status="Weekend"; subD="Day off"; }
+    else if(mins < SHIFT_START){ status="Before shift"; subD="Starts 8:30 AM"; }
+    else if(mins >= SHIFT_END){ status="Shift complete"; subD="7h 30m done"; }
+    else { status="On shift"; subD=`${fmtHM(mins-SHIFT_START)} in · ${fmtHM(SHIFT_END-mins)} left`; }
+    setRing(valD, frac);
+    const pd = Math.round(frac*100)+"%";
+    pctD.textContent = pd; subD_el.textContent = subD; status_el.textContent = status;
+
+    // Weekly (Sun–Thu, minus holidays)
+    const sundayDate = date - dow;
+    let doneW=0, fracW=0;
+    for(let off=0; off<=6; off++){
+      const td = sundayDate + off;                 // off === day-of-week
+      const wd = new Date(y, mo, td);              // handles month spill
+      if(td < date){ if(effWork(wd.getFullYear(),wd.getMonth(),wd.getDate(),off)) doneW++; }
+      else if(td === date && effWork(y,mo,date,off)){ fracW = frac; }
+    }
+    let weekTotal=0; for(let off=0; off<=4; off++){ const wd=new Date(y,mo,sundayDate+off); if(!isHoliday(wd.getFullYear(),wd.getMonth(),wd.getDate())) weekTotal++; }
+    const weekP = weekTotal ? (doneW+fracW)/weekTotal : 0;
+    setRing(valW, weekP);
+    const pw = Math.round(weekP*100)+"%";
+    pctW.textContent = pw;
+    subW_el.textContent = `${doneW} of ${weekTotal} working days done`;
+
+    // Monthly (actual working days, minus holidays)
+    const dim = new Date(y, mo+1, 0).getDate();
+    let totalM=0, doneM=0;
+    for(let day=1; day<=dim; day++){
+      const wdow = new Date(y,mo,day).getDay();
+      if(effWork(y,mo,day,wdow)){ totalM++; if(day<date) doneM++; }
+    }
+    const monthP = totalM ? (doneM+frac)/totalM : 0;
+    setRing(valM, monthP);
+    const pm = Math.round(monthP*100)+"%";
+    pctM.textContent = pm;
+    subM_el.textContent = `${doneM} of ${totalM} days · ${MONTHS[mo]}`;
+  }
+
+  // shorthand refs
+  const ampm_el=document.getElementById("ampm"), date_el=document.getElementById("date"),
+        status_el=document.getElementById("status"), subD_el=document.getElementById("subD"),
+        subW_el=document.getElementById("subW"), subM_el=document.getElementById("subM");
+
+  // ---------- Holiday UI ----------
+  const holPanel=document.getElementById("holPanel"), holList=document.getElementById("holList"),
+        holDate=document.getElementById("holDate"), holLabel=document.getElementById("holLabel");
+  document.getElementById("holToggle").addEventListener("click",()=>{
+    holPanel.classList.toggle("open");
+    if(holPanel.classList.contains("open")) renderHolidays();
+  });
+  document.getElementById("holAdd").addEventListener("click",()=>{
+    const dt=holDate.value; if(!dt) return;
+    if(!holidaySet.has(dt)){
+      holidays.push({date:dt, label:(holLabel.value||"Holiday").trim()});
+      holidays.sort((a,b)=>a.date.localeCompare(b.date));
+      saveHolidays(); renderHolidays(); update();
+    }
+    holDate.value=""; holLabel.value="";
+  });
+  function renderHolidays(){
+    holList.innerHTML="";
+    if(!holidays.length){ holList.innerHTML='<div class="hol-empty">No holidays added.</div>'; return; }
+    holidays.forEach((hol,i)=>{
+      const [yy,mm,dd]=hol.date.split("-").map(Number);
+      const wd=WDAYS[new Date(yy,mm-1,dd).getDay()];
+      const row=document.createElement("div"); row.className="hol-item";
+      row.innerHTML=`<span class="d">${dd} ${MONTHS[mm-1].slice(0,3)} ${yy}</span>
+        <span class="wd">${wd}</span><span class="l">${hol.label||""}</span>
+        <button title="Remove">×</button>`;
+      row.querySelector("button").addEventListener("click",()=>{
+        holidays.splice(i,1); saveHolidays(); renderHolidays(); update();
+      });
+      holList.appendChild(row);
+    });
+  }
+
+  update();
+  setInterval(update, 1000);
+</script>
+</body>
+</html>
